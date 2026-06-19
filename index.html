@@ -396,19 +396,37 @@ let systemN    = 2;         // mínimo de acertos para sistema
 
 // ===================== STRENGTH TABLE =====================
 const STR = {
-  'brasil':0.88,'argentina':0.87,'franca':0.85,'inglaterra':0.83,'espanha':0.82,
-  'alemanha':0.80,'portugal':0.79,'holanda':0.78,'italia':0.75,'belgica':0.76,
-  'croacia':0.73,'uruguai':0.72,'colombia':0.70,'mexico':0.68,'chile':0.67,
-  'eua':0.67,'japao':0.66,'marrocos':0.65,'polonia':0.65,'senegal':0.64,
-  'australia':0.63,'canada':0.63,'coreia do sul':0.65,'equador':0.63,
-  'peru':0.62,'ira':0.62,'tunicsia':0.60,'arabia saudita':0.60,'camaroes':0.60,
-  'gana':0.60,'costa rica':0.59,'bolivia':0.55,'austrakia':0.63,
-  'river plate':0.78,'boca juniors':0.75,'nacional':0.65,'ldu':0.63,
+  // Seleções de ponta
+  'argentina':0.91,'franca':0.89,'brasil':0.88,'inglaterra':0.86,'espanha':0.84,
+  'portugal':0.82,'alemanha':0.80,'paises baixos':0.79,'holanda':0.79,'italia':0.77,
+  'belgica':0.76,'uruguai':0.75,'croacia':0.73,'colombia':0.71,
+  // Copa do Mundo 2026 — força calibrada
+  'marrocos':0.68,'japao':0.67,'estados unidos':0.72,'eua':0.72,'mexico':0.66,
+  'senegal':0.65,'coreia do sul':0.64,'australia':0.62,'equador':0.61,
+  'ira':0.61,'ira islamica':0.61,'peru':0.60,'tunicsia':0.59,'tunisia':0.59,
+  'arabia saudita':0.58,'camaroes':0.58,'gana':0.57,'chile':0.60,
+  'costa rica':0.50,'canada':0.50,'panama':0.46,'honduras':0.45,
+  'venezuela':0.50,'bolivia':0.44,'paraguai':0.53,'el salvador':0.40,
+  'guatemala':0.38,'jamaica':0.42,'trinidad':0.43,'haiti':0.38,
+  'curacao':0.32,'cuba':0.30,'suriname':0.33,'nicaragua':0.28,
+  // Europa
+  'escocia':0.60,'irlanda':0.58,'noruega':0.65,'dinamarca':0.68,'suecia':0.65,
+  'austria':0.63,'suica':0.68,'turquia':0.64,'ucrania':0.66,'hungria':0.60,
+  'serbia':0.63,'albania':0.55,'georgia':0.53,'eslovenia':0.57,
+  'eslovaquia':0.59,'romenia':0.57,'republica tcheca':0.61,'polonia':0.65,
+  // África
+  'nigeria':0.60,'egito':0.58,'africa do sul':0.54,'argelia':0.55,
+  'mali':0.53,'costa do marfim':0.62,'marfim':0.62,'angola':0.43,
+  'burkina faso':0.50,'tanzania':0.39,'zimbabue':0.38,'mocambique':0.40,
+  // Clubes sul-americanos
+  'river plate':0.80,'boca juniors':0.76,'nacional':0.67,'ldu':0.65,
+  // Clubes brasileiros
   'flamengo':0.82,'palmeiras':0.80,'atletico-mg':0.76,'atletico mg':0.76,
   'gremio':0.72,'corinthians':0.70,'internacional':0.70,'sao paulo':0.68,
   'fluminense':0.67,'santos':0.64,'cruzeiro':0.63,'botafogo':0.65,
   'vasco':0.62,'bahia':0.60,'fortaleza':0.61,'athletico-pr':0.63,
-  'bragantino':0.62,'athletico pr':0.63
+  'bragantino':0.62,'athletico pr':0.63,'juventude':0.58,'criciuma':0.57,
+  'ceara':0.58,'sport':0.57,'coritiba':0.58,'chapecoense':0.53,
 };
 function norm(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
 function getStr(name){
@@ -418,13 +436,20 @@ function getStr(name){
 }
 function p2o(p,vig=0.05){return Math.max(1.01,Math.round(100/(p*(1+vig)))/100);}
 function genOdds(h,a){
-  const sh=getStr(h)+0.06,sa=getStr(a),tot=sh+sa+0.28;
-  const ph=sh/tot,pd=0.28/tot,pa=sa/tot;
-  return [p2o(ph),p2o(pd),p2o(pa)];
+  const sh=getStr(h),sa=getStr(a);
+  const diff=sh-sa+0.04;
+  const pHwin=1/(1+Math.exp(-diff*6.5));
+  const pD=0.217*Math.exp(-3.18*diff*diff);
+  const pH=pHwin*(1-pD);
+  const pA=(1-pHwin)*(1-pD);
+  return [p2o(pH,0.04),p2o(pD,0.04),p2o(pA,0.04)];
 }
 function probsFrom(h,a){
-  const sh=getStr(h)+0.06,sa=getStr(a),tot=sh+sa+0.28;
-  return [sh/tot,0.28/tot,sa/tot];
+  const sh=getStr(h),sa=getStr(a);
+  const diff=sh-sa+0.04;
+  const pHwin=1/(1+Math.exp(-diff*6.5));
+  const pD=0.217*Math.exp(-3.18*diff*diff);
+  return [pHwin*(1-pD), pD, (1-pHwin)*(1-pD)];
 }
 function simRes(probs){let r=Math.random(),acc=0;for(let i=0;i<probs.length;i++){acc+=probs[i];if(r<=acc)return i;}return probs.length-1;}
 function isLocked(iso){if(!iso)return false;try{return Date.now()>=new Date(iso).getTime()+15*60*1000;}catch{return false;}}
@@ -578,8 +603,8 @@ function genExtraOdds(ev){
   const tot=sh+sa+0.28;
   const pH=sh/tot, pD=0.28/tot, pA=sa/tot;
   // Expected goals per team (Poisson λ)
-  const λh=Math.max(0.3, (sh/(sh+sa))*3.2);
-  const λa=Math.max(0.15, (sa/(sh+sa))*2.4);
+  const λh=Math.max(0.25, (sh/(sh+sa))*3.0);
+  const λa=Math.max(0.10, (sa/(sh+sa))*2.2);
 
   // Chance Dupla
   const hn=ev.home.n, an=ev.away.n;
