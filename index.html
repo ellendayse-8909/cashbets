@@ -1938,4 +1938,15 @@ auth.onAuthStateChanged(async user=>{
     currentUser=null;
     currentUserNome=null;
     currentUserTel=null;
-    espnLoaded=
+    espnLoaded=false;
+    if(espnInterval){clearInterval(espnInterval);espnInterval=null;}
+    if(betsUnsub){betsUnsub();betsUnsub=null;}
+    document.getElementById('auth-screen').style.display='flex';
+    document.getElementById('app').style.display='none';
+    document.getElementById('sb-ranking').style.display='none';
+    document.getElementById('sb-admin').style.display='none';
+  }
+});
+</script>
+</body>
+</html>
