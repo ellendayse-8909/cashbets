@@ -1926,4 +1926,75 @@ auth.onAuthStateChanged(async user=>{
     const ubtn=document.querySelector('#auth-user-form button');
     const abtn=document.querySelector('#auth-admin-form button');
     if(ubtn){ubtn.disabled=false;ubtn.textContent='Entrar / Cadastrar';}
-    if
+    if(abtn){abtn.disabled=false;abtn.textContent='Entrar como Admin';}
+    // Update header
+    document.getElementById('hdr-login-btn').style.display='none';
+    document.getElementById('hdr-logout-btn').style.display='';
+    // Load user data from Firestore
+    let nome=null;
+    try{
+      const snap=await db.collection('users').doc(user.uid).get();
+      if(snap.exists){
+        const d=snap.data();
+        nome=d.nome||null;
+        currentUserTel=d.telefone||null;
+        if(d.credits!=null) userCredits=d.credits;
+        else userCredits=0;
+      } else {
+        // New admin user
+        if(ADMIN_EMAILS.includes(user.email)){
+          await db.collection('users').doc(user.uid).set({
+            email:user.email,credits:0,totalBets:0,totalWon:0,
+            createdAt:firebase.firestore.FieldValue.serverTimestamp()
+          },{merge:true});
+        }
+        userCredits=0;
+      }
+    }catch{userCredits=0;}
+    // Display name: nome para usuários comuns, prefixo do email para admins
+    currentUserNome=nome;
+    // currentUserTel already set above inside snap.exists block
+    const isAdmin=ADMIN_EMAILS.includes(user.email);
+    document.getElementById('hdr-user').textContent=nome||(user.email?user.email.split('@')[0]:'Usuário');
+    document.getElementById('hdr-cred').style.display='';
+    document.getElementById('last-updated').style.display='';
+    document.getElementById('sb-ranking').style.display='flex';
+    if(isAdmin){
+      document.getElementById('sb-admin').style.display='flex';
+    }
+    updateHdrCredits();
+    renderSlip();
+    updateCounts();
+    renderEvents();
+    if(betsUnsub) betsUnsub();
+    betsUnsub=db.collection('bets').where('userId','==',user.uid).limit(50).onSnapshot(snap=>{
+      allBets=snap.docs.map(d=>({_id:d.id,...d.data()}));
+      renderHistory(allBets);
+    }, err=>{
+      console.error('Firestore bets error:',err);
+      db.collection('bets').where('userId','==',user.uid).limit(50).get().then(s=>{
+        allBets=s.docs.map(d=>({_id:d.id,...d.data()}));
+        renderHistory(allBets);
+      });
+    });
+  } else {
+    currentUser=null;
+    currentUserNome=null;
+    currentUserTel=null;
+    if(betsUnsub){betsUnsub();betsUnsub=null;}
+    // Update header to visitor state
+    document.getElementById('hdr-login-btn').style.display='';
+    document.getElementById('hdr-logout-btn').style.display='none';
+    document.getElementById('hdr-cred').style.display='none';
+    document.getElementById('last-updated').style.display='none';
+    document.getElementById('hdr-user').textContent='';
+    document.getElementById('sb-ranking').style.display='none';
+    document.getElementById('sb-admin').style.display='none';
+    document.getElementById('hist-inner').innerHTML='<div class="slip-empty">Faça login para ver suas apostas</div>';
+    renderSlip();
+    renderEvents();
+  }
+});
+</script>
+</body>
+</html>
