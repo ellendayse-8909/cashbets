@@ -1255,7 +1255,7 @@ function renderSlip(){
   }
   const selList=multiSlip.map((s,i)=>{
     const stk=parseFloat(s.stake)||10;
-    const vals=[5,10,25,50];
+    const vals=[10,50,100,250];
     const btns=vals.map(v=>`<button onclick="updateSelStake(${i},${v})" style="flex:1;padding:4px 0;background:${stk===v?'var(--grn)':'#1a2133'};border:1px solid ${stk===v?'var(--grn)':'#2a3550'};color:${stk===v?'#fff':'var(--dim)'};border-radius:4px;font-size:.74rem;font-weight:600;cursor:pointer">R$${v}</button>`).join('');
     return `
     <div class="ms-item">
