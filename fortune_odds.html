@@ -163,8 +163,44 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',Arial,sans-ser
 .loading{color:var(--mut);text-align:center;padding:40px;}
 .no-ev{color:var(--mut);text-align:center;padding:50px;font-size:.84rem;}
 @media(max-width:900px){.sidebar{width:46px;}.sb-item .sb-label,.sb-item .sb-cnt,.sb-sec{display:none;}.sb-item{justify-content:center;padding:10px;}.rp{width:230px;}}
-@media(max-width:640px){.layout{flex-direction:column;height:auto;overflow:visible;}.sidebar{width:100%;height:auto;display:flex;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid #1f2937;padding:4px 8px;}.sb-sec{display:none;}.sb-item{white-space:nowrap;border-left:none;border-bottom:2px solid transparent;padding:8px 10px;}.sb-item.active{border-bottom-color:var(--grn);border-left:none;background:transparent;}.rp{width:100%;border-left:none;border-top:1px solid #1f2937;}.main{overflow:visible;}}
+@media(max-width:640px){
+  .layout{flex-direction:column;height:auto;overflow:visible;}
+  .sidebar{width:100%;height:auto;display:flex;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid #1f2937;padding:4px 8px;}
+  .sb-sec{display:none;}
+  .sb-item{white-space:nowrap;border-left:none;border-bottom:2px solid transparent;padding:8px 10px;}
+  .sb-item.active{border-bottom-color:var(--grn);border-left:none;background:transparent;}
+  .main{overflow:visible;}
+  /* Painel de apostas: hidden por padrão no mobile — abre via botão flutuante */
+  .rp{display:none;position:fixed;bottom:0;left:0;right:0;width:100%;max-height:75vh;overflow-y:auto;border-left:none;border-top:2px solid var(--grn);border-radius:16px 16px 0 0;z-index:90;background:var(--sb);}
+  .rp.mobile-open{display:flex;}
+  /* Botão flutuante "Ver Aposta" */
+  #mobile-slip-fab{display:flex;}
+  /* Odd buttons maiores para touch */
+  .ob{padding:10px 4px;font-size:.95rem;}
+  .mkt-ob{padding:9px 7px;font-size:.85rem;}
+  .odds-row{gap:6px;}
+  /* Header mais compacto */
+  .hdr{padding:0 10px;}
+  .logo{font-size:1rem;}
+  .ea{padding:8px;}
+  .ev-card{padding:10px;}
+  .fbar{padding:6px 8px;gap:4px;}
+  .fpill{padding:5px 10px;font-size:.72rem;}
+  .srch{display:none;}
+}
+@media(max-width:400px){
+  .ob{font-size:.88rem;padding:10px 2px;}
+  .ev-tname{max-width:60px;font-size:.68rem;}
+  .ev-sc{font-size:1.3rem;}
+  .hdr-r{gap:6px;}
+  .cred-badge{padding:3px 8px;font-size:.78rem;}
+}
 
+/* MOBILE FAB — botão flutuante de aposta */
+#mobile-slip-fab{display:none;position:fixed;bottom:18px;right:18px;z-index:100;background:var(--grn);color:#fff;border:none;border-radius:50px;padding:12px 20px;font-size:.88rem;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(29,185,84,.4);align-items:center;gap:8px;}
+#mobile-slip-fab .fab-cnt{background:rgba(0,0,0,.25);border-radius:10px;padding:1px 7px;font-size:.78rem;}
+#mobile-slip-close{display:none;position:sticky;top:0;background:var(--sb);border-bottom:1px solid #1f2937;padding:10px 14px;cursor:pointer;font-size:.82rem;color:var(--mut);text-align:right;z-index:1;}
+@media(max-width:640px){#mobile-slip-close{display:block;}}
 .mode-toggle{display:flex;gap:4px;margin-bottom:10px;background:#0d1117;border-radius:6px;padding:3px;}
 .mtb{flex:1;padding:5px 4px;border:none;border-radius:5px;background:transparent;color:var(--mut);font-size:.72rem;cursor:pointer;transition:all .15s;font-weight:600;}
 .mtb.on{background:var(--grn);color:#fff;}
@@ -341,7 +377,8 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',Arial,sans-ser
     </main>
 
     <!-- RIGHT PANEL -->
-    <aside class="rp">
+    <aside class="rp" id="rp">
+      <div id="mobile-slip-close" onclick="toggleMobileSlip()">✕ Fechar</div>
       <!-- BET SLIP -->
       <div class="ps">
         <div class="pt">🎫 Aposta</div>
@@ -357,6 +394,11 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',Arial,sans-ser
     </aside>
   </div>
 </div>
+
+<!-- MOBILE FAB -->
+<button id="mobile-slip-fab" onclick="toggleMobileSlip()">
+  🎯 Ver Aposta <span class="fab-cnt" id="fab-cnt">0</span>
+</button>
 
 <!-- MODAL -->
 <div id="modal" class="mo" style="display:none">
@@ -590,6 +632,7 @@ const db   = firebase.firestore();
 let currentUser = null;
 let userCredits = 0;
 let slip = null;         // {evId, label, odd, selection}
+let openMarkets = {};    // {evId: Set<mktIndex>} — persiste estado dos acordeões
 let activeCat  = 'all';
 let dateFilt   = 'all';
 let betsUnsub  = null;
@@ -850,6 +893,16 @@ function toggleMarket(btn){
   btn.classList.toggle('open');
   const body=btn.nextElementSibling;
   body.classList.toggle('open');
+  // Salva estado para restaurar após re-render
+  const card=btn.closest('.ev-card');
+  if(card){
+    const evId=card.id.replace('ev-','');
+    const idx=Array.from(card.querySelectorAll('.mkt-hdr')).indexOf(btn);
+    if(!openMarkets[evId]) openMarkets[evId]=new Set();
+    if(btn.classList.contains('open')) openMarkets[evId].add(idx);
+    else openMarkets[evId].delete(idx);
+    if(openMarkets[evId].size===0) delete openMarkets[evId];
+  }
 }
 
 function mktObCls(evId,mktKey,idx){
@@ -986,6 +1039,19 @@ function renderEvents(){
     </div>`;
   }
   area.innerHTML=html;
+  // Restaura acordeões abertos
+  Object.entries(openMarkets).forEach(([evId,idxSet])=>{
+    const card=document.getElementById('ev-'+evId);
+    if(card){
+      const hdrs=card.querySelectorAll('.mkt-hdr');
+      idxSet.forEach(i=>{
+        if(hdrs[i]){
+          hdrs[i].classList.add('open');
+          hdrs[i].nextElementSibling.classList.add('open');
+        }
+      });
+    }
+  });
 }
 
 function compIcon(comp){
@@ -1095,12 +1161,32 @@ function systemPotential(stake){
   return avgReturn;
 }
 
+function toggleMobileSlip(){
+  const rp=document.getElementById('rp');
+  rp.classList.toggle('mobile-open');
+}
+function updateFab(){
+  const fab=document.getElementById('mobile-slip-fab');
+  const cnt=document.getElementById('fab-cnt');
+  if(!fab) return;
+  const total=betMode==='simples'?(slip?1:0):multiSlip.length;
+  if(total>0 && window.innerWidth<=640){
+    fab.style.display='flex';
+    if(cnt) cnt.textContent=total;
+  } else {
+    fab.style.display='none';
+    // fecha o painel se não há apostas
+    const rp=document.getElementById('rp');
+    if(rp && total===0) rp.classList.remove('mobile-open');
+  }
+}
+
 function renderSlip(){
   const el=document.getElementById('slip-inner');
   const modeHtml=``;
 
   if(betMode==='simples'){
-    if(!slip){el.innerHTML=modeHtml+'<div class="slip-empty">Selecione uma cota para apostar</div>';return;}
+    if(!slip){el.innerHTML=modeHtml+'<div class="slip-empty">Selecione uma cota para apostar</div>';updateFab();return;}
     el.innerHTML=modeHtml+`
       <div class="slip-c">
         <div class="slip-ev">${slip.evLabel}</div>
@@ -1119,6 +1205,7 @@ function renderSlip(){
       <button class="cbtn" onclick="confirmBet()">Confirmar Aposta</button>
       <button class="xbtn" onclick="clearSlip()">Cancelar</button>`;
     updateReturn();
+    updateFab();
     return;
   }
 
@@ -1155,7 +1242,7 @@ function renderSlip(){
   // Apostas individuais por jogo
   if(multiSlip.length===0){
     el.innerHTML='<div class="slip-empty">Selecione os jogos para apostar</div>';
-    return;
+    updateFab();return;
   }
   const selList=multiSlip.map((s,i)=>{
     const stk=parseFloat(s.stake)||0;
@@ -1184,6 +1271,7 @@ function renderSlip(){
     <div class="ret-box"><span class="ret-lbl">Retorno potencial</span><span class="ret-val" style="color:var(--grn)" id="slip-total-ret">R$ ${totalRet.toFixed(2).replace('.',',')}</span></div>
     <button class="cbtn" onclick="confirmBet()">Confirmar ${multiSlip.length} Aposta${multiSlip.length>1?'s':''}</button>
     <button class="xbtn" onclick="clearSlip()">Cancelar</button>`;
+  updateFab();
 }
 function removeMultiSel(i){multiSlip.splice(i,1);renderSlip();renderEvents();}
 function updateSelStake(i,v){
