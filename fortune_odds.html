@@ -1283,7 +1283,7 @@ function renderSlip(){
       <span class="ret-val" style="font-size:1.1rem">R$ ${totalStk.toFixed(2).replace('.',',')}</span>
     </div>
     <div class="ret-box"><span class="ret-lbl">Retorno potencial</span><span class="ret-val" style="color:var(--grn)">R$ ${totalRet.toFixed(2).replace('.',',')}</span></div>
-    <button class="cbtn" onclick="confirmBet()" style="margin-top:10px">⚡ Gerar PIX — R$ ${totalStk.toFixed(2).replace('.',',')}</button>
+    <button class="cbtn" onclick="confirmBet()" style="margin-top:10px">${totalStk<=userCredits?'🎯 Apostar':'⚡ Gerar PIX — R$ '+totalStk.toFixed(2).replace('.',',')}</button>
     <button class="xbtn" onclick="clearSlip()">Limpar carrinho</button>`;
   updateFab();
 }
