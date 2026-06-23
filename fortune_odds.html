@@ -1693,7 +1693,7 @@ async function confirmIndividualBets(){
     if(!s.stake) s.stake=10; // default R$10 se não definido
   }
   const totalStk=Math.round(multiSlip.reduce((t,s)=>t+(parseFloat(s.stake)||10),0)*100)/100;
-  if(totalStk>userCredits){showCreditRequestModal();return;}
+  const faltam=Math.round(Math.max(0,totalStk-userCredits)*100)/100;
   const btn=document.querySelector('.cbtn');
   if(btn){btn.disabled=true;btn.textContent='💾 Salvando...';}
   try{
@@ -1728,11 +1728,23 @@ async function confirmIndividualBets(){
     const n=multiSlip.length;
     multiSlip=[];slip=null;
     renderSlip();renderEvents();
-    // PIX para total das apostas individuais
-    if(btn){btn.textContent='⚡ Gerando PIX...';}
-    const chargeI=await createWooviCharge(totalStk, n+' apostas individuais');
-    if(btn){btn.disabled=false;btn.textContent='Confirmar Apostas';}
-    showPixModal(chargeI, totalStk, n+` aposta${n>1?'s':''} registrada${n>1?'s':''}`, 'Resultado após cada jogo');
+
+    if(faltam>0){
+      // Créditos insuficientes — gera PIX apenas pela diferença
+      if(btn){btn.textContent='⚡ Gerando PIX...';}
+      const chargeI=await createWooviCharge(faltam, 'Complemento para '+n+' aposta'+(n>1?'s':''));
+      if(btn){btn.disabled=false;btn.textContent='Confirmar Apostas';}
+      showPixModal(chargeI, faltam, n+` aposta${n>1?'s':''} registrada${n>1?'s':''}`, `Pague R$ ${faltam.toFixed(2).replace('.',',')} para completar`);
+    } else {
+      // Créditos suficientes — confirma sem PIX
+      if(btn){btn.disabled=false;btn.textContent='Confirmar Apostas';}
+      document.getElementById('modal-title').textContent='✅ Apostas confirmadas!';
+      document.getElementById('modal-body').innerHTML=
+        `<strong>${n} aposta${n>1?'s':''}</strong> registrada${n>1?'s':''} com sucesso.<br>
+         Total: <strong>R$ ${totalStk.toFixed(2).replace('.',',')}</strong> debitado dos seus créditos.<br>
+         <span style="color:var(--mut);font-size:.85rem">Resultado disponível após os jogos.</span>`;
+      document.getElementById('modal').style.display='flex';
+    }
   }catch(err){
     console.error('Erro:',err);
     if(btn){btn.disabled=false;btn.textContent=`Confirmar ${multiSlip.length} Apostas`;}
