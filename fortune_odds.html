@@ -282,7 +282,7 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',Arial,sans-ser
     <!-- SIDEBAR -->
     <nav class="sidebar" id="sidebar">
       <div class="sb-sec">Esportes</div>
-      <div class="sb-item active" data-cat="all" onclick="setCategory('all',this)">
+      <div class="sb-item" data-cat="all" onclick="setCategory('all',this)">
         <span class="sb-icon">🎯</span><span class="sb-label">Todos</span>
         <span class="sb-cnt" id="cnt-all">0</span>
       </div>
@@ -291,7 +291,7 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',Arial,sans-ser
         <span class="sb-cnt live" id="cnt-live">0</span>
       </div>
       <div class="sb-sec">Futebol</div>
-      <div class="sb-item" data-cat="Copa" onclick="setCategory('Copa',this)">
+      <div class="sb-item active" data-cat="Copa" onclick="setCategory('Copa',this)">
         <span class="sb-icon">🌍</span><span class="sb-label">Copa do Mundo</span>
         <span class="sb-cnt" id="cnt-Copa">0</span>
       </div>
@@ -299,8 +299,8 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',Arial,sans-ser
         <span class="sb-icon">🇧🇷</span><span class="sb-label">Série A</span>
         <span class="sb-cnt" id="cnt-SerieA">0</span>
       </div>
-      <div class="sb-sec">Outros</div>
-      <div class="sb-item" data-cat="Politica" onclick="setCategory('Politica',this)">
+      <!-- Política oculta temporariamente -->
+      <div class="sb-item" data-cat="Politica" onclick="setCategory('Politica',this)" style="display:none">
         <span class="sb-icon">🗳️</span><span class="sb-label">Política</span>
         <span class="sb-cnt" id="cnt-Politica">0</span>
       </div>
@@ -633,7 +633,7 @@ let currentUser = null;
 let userCredits = 0;
 let slip = null;         // {evId, label, odd, selection}
 let openMarkets = {};    // {evId: Set<mktIndex>} — persiste estado dos acordeões
-let activeCat  = 'all';
+let activeCat  = 'Copa';
 let dateFilt   = 'all';
 let betsUnsub  = null;
 let allBets    = [];
